@@ -23,7 +23,6 @@ class PythonSymbolExtractor(BaseSymbolExtractor):
         symbols_list: List[Symbol],
     ) -> None:
         """Single-pass traversal of Python AST."""
-        # Check for module level docstring
         mod_docstring = self._extract_docstring_from_block(root_ctx)
         if mod_docstring and symbols_list and symbols_list[0].kind == SymbolKind.MODULE:
             symbols_list[0] = Symbol(
@@ -144,6 +143,9 @@ class PythonSymbolExtractor(BaseSymbolExtractor):
 
         name = name_node.text
         qualified_name = f"{scope_qname}.{name}"
+        if any(s.qualified_name == qualified_name for s in symbols_list):
+            qualified_name = f"{scope_qname}.{name}_L{ctx.start_line}"
+
         visibility = self._determine_visibility(name)
 
         superclasses_node = ctx.child_by_field_name("superclasses")
@@ -210,6 +212,9 @@ class PythonSymbolExtractor(BaseSymbolExtractor):
 
         name = name_node.text
         qualified_name = f"{scope_qname}.{name}"
+        if any(s.qualified_name == qualified_name for s in symbols_list):
+            qualified_name = f"{scope_qname}.{name}_L{ctx.start_line}"
+
         visibility = self._determine_visibility(name)
 
         is_async = any(c.type == "async" for c in ctx.node.children) or ctx.text.startswith("async ")
@@ -302,6 +307,9 @@ class PythonSymbolExtractor(BaseSymbolExtractor):
                     continue
 
                 param_qname = f"{scope_qname}.{param_name}"
+                if any(s.qualified_name == param_qname for s in symbols_list):
+                    param_qname = f"{scope_qname}.{param_name}_L{p_ctx.start_line}"
+
                 file_path = parse_result.source_file.relative_path
                 lang = parse_result.source_file.language
 
@@ -407,6 +415,9 @@ class PythonSymbolExtractor(BaseSymbolExtractor):
 
         kind = SymbolKind.CONSTANT if (is_uppercase or is_final) else SymbolKind.VARIABLE
         qname = f"{scope_qname}.{name}"
+        if any(s.qualified_name == qname for s in symbols_list):
+            qname = f"{scope_qname}.{name}_L{ctx.start_line}_{ctx.start_column}"
+
         visibility = self._determine_visibility(name)
 
         file_path = parse_result.source_file.relative_path
